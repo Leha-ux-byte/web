@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galeri Dokumentasi</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+
+    .nav-link.active {
+      background-color: #009688 !important;
+      color: white !important;
+    }
+
+    .card img {
+      object-fit: cover;
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #009688;">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">Galeri Dokumentasi</a>
+      <a class="btn btn-light ms-auto" href="index.html">← Kembali</a>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <ul class="nav nav-pills justify-content-center mb-4" id="kategoriFilter">
+      <li class="nav-item"><a class="nav-link active" data-kategori="all" href="#">Semua</a></li>
+      <li class="nav-item"><a class="nav-link" data-kategori="anbk" href="#">ANBK</a></li>
+      <li class="nav-item"><a class="nav-link" data-kategori="agustusan" href="#">Agustusan</a></li>
+      <li class="nav-item"><a class="nav-link" data-kategori="blk" href="#">BLK</a></li>
+    </ul>
+
+    <div class="row" id="galeriContainer">
+      <div class="text-center text-muted">Memuat dokumentasi...</div>
+    </div>
+  </div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-storage.js"></script>
+
+<!-- Firebase Config kamu -->
+<script src="paneljs/firebase.js"></script>
+
+
+  <script>
+    const galeriContainer = document.getElementById('galeriContainer');
+    const filterLinks = document.querySelectorAll('#kategoriFilter .nav-link');
+
+    let dataDokumentasi = [];
+
+    // Ambil semua data dari Firestore
+    async function ambilData() {
+      const snapshot = await firestore.collection("dokumentasi").orderBy("createdAt", "desc").get();
+      dataDokumentasi = snapshot.docs.map(doc => doc.data());
+      tampilkanData("all");
+    }
+
+    // Tampilkan berdasarkan kategori
+    function tampilkanData(kategori) {
+      galeriContainer.innerHTML = "";
+
+      const filtered = kategori === "all"
+        ? dataDokumentasi
+        : dataDokumentasi.filter(item => item.kategori === kategori);
+
+      if (filtered.length === 0) {
+        galeriContainer.innerHTML = `<div class="text-center text-muted">Tidak ada data dalam kategori ini.</div>`;
+        return;
+      }
+
+      filtered.forEach(item => {
+        const card = `
+          <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+              <img src="${item.url}" class="card-img-top" alt="${item.caption}">
+              <div class="card-body">
+                <h6 class="card-title">${item.caption}</h6>
+                <span class="badge bg-secondary text-uppercase">${item.kategori}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        galeriContainer.innerHTML += card;
+      });
+    }
+
+    // Event klik kategori
+    filterLinks.forEach(link => {
+      link.addEventListener("click", e => {
+        e.preventDefault();
+        filterLinks.forEach(l => l.classList.remove("active"));
+        link.classList.add("active");
+        const kategori = link.dataset.kategori;
+        tampilkanData(kategori);
+      });
+    });
+
+    ambilData();
+  </script>
+
+</body>
+</html>

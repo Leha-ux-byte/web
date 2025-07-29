@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Murid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    #foto-profile {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #0d6efd;
+    }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="card shadow p-4">
+      <div class="text-center">
+        <img id="foto-profile" src="https://ui-avatars.com/api/?name=User" alt="Foto Profil" class="mb-3">
+        <h2 id="greeting">Halo, Murid!</h2>
+        <p id="kelas-info" class="text-muted"></p>
+      </div>
+      <hr>
+
+      <p><strong>Status Akun:</strong> Aktif</p>
+      <p><strong>SPP Bulan <span id="nama-bulan"></span>:</strong>
+        <span id="status-spp" class="fw-bold text-info">Memuat...</span>
+      </p>
+
+      <button class="btn btn-danger w-100 mt-3" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <!-- Firebase SDK Modular -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+apiKey: "AIzaSyDp8xDHI10UhDrW_bAjXr1nYU08AYtqq1M",
+  authDomain: "hslenterahati-f5ee1.firebaseapp.com",
+  projectId: "hslenterahati-f5ee1",
+  storageBucket: "hslenterahati-f5ee1.firebasestorage.app",
+  messagingSenderId: "491189743285",
+  appId: "1:491189743285:web:abf65d48da75c03ac9d8fc"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const greeting = document.getElementById("greeting");
+    const kelasInfo = document.getElementById("kelas-info");
+    const fotoProfile = document.getElementById("foto-profile");
+    const statusSPP = document.getElementById("status-spp");
+    const namaBulanSpan = document.getElementById("nama-bulan");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "/pages/login.html";
+        return;
+      }
+
+      const uid = user.uid;
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await signOut(auth);
+        window.location.href = "/pages/login.html";
+        return;
+      }
+
+      const data = userSnap.data();
+      if (data.role !== "murid") {
+        window.location.href = "/";
+        return;
+      }
+
+      // 👋 Sambutan
+      greeting.textContent = `Hai, ${data.nama}! 👋`;
+      kelasInfo.textContent = `Kelas: ${data.kelas || '-'}`;
+      fotoProfile.src = data.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama)}`;
+
+      // 🔄 Cek bulan sekarang
+      const now = new Date();
+      const namaBulan = now.toLocaleString("id-ID", { month: "long" }).toLowerCase();
+      const tahun = now.getFullYear();
+      const idBulan = `${namaBulan}-${tahun}`;
+      namaBulanSpan.textContent = namaBulan.charAt(0).toUpperCase() + namaBulan.slice(1);
+
+      // 🔄 Ambil status SPP bulan ini
+      const sppRef = doc(db, "spp", uid, "bulan", idBulan);
+      const sppSnap = await getDoc(sppRef);
+
+      if (sppSnap.exists()) {
+        const spp = sppSnap.data();
+        const statusText = spp.status === "Lunas" ? "✅ Lunas" : "❌ Belum Lunas";
+        statusSPP.textContent = statusText;
+        statusSPP.classList.remove("text-info");
+        statusSPP.classList.add(spp.status === "Lunas" ? "text-success" : "text-danger");
+      } else {
+        statusSPP.textContent = "Belum tersedia";
+        statusSPP.classList.remove("text-info");
+        statusSPP.classList.add("text-muted");
+      }
+    });
+
+    // 🔚 Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "/");
+    });
+  </script>
+</body>
+</html>
